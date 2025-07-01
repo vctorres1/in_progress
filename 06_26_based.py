@@ -78,43 +78,51 @@ if st.button("Run Monthly Simulation"):
     deal_options = list(itertools.product(deal_range, deal_values, commission_rates))
     coaching_options = list(coaching_range)
 
+    total_per_month = len(coaching_options) * len(deal_options)
+    st.info(f"Evaluating {total_per_month:,} combinations per month × {months} months = {total_per_month * months:,} total.")
+
     all_monthly_solutions = []
     success = True
+    progress = st.progress(0)
+    month_status = st.empty()
 
-    with st.spinner("Running monthly simulations..."):
-        for month in range(months):
-            month_results = []
-            for coaching_count in coaching_options:
-                coaching_revenue = coaching_count * coaching_price
-                for deal_count, deal_value, commission_rate in deal_options:
-                    if deal_count == 0:
-                        total_commission = 0
-                        recognized_revenue = 0
-                    else:
-                        commission_per_deal = deal_value * commission_rate
-                        total_commission = commission_per_deal * deal_count
-                        recognized_revenue = total_commission / 12 * max(0, (months - month - 2))
+    for month in range(months):
+        month_results = []
+        count = 0
+        for coaching_count in coaching_options:
+            coaching_revenue = coaching_count * coaching_price
+            for deal_count, deal_value, commission_rate in deal_options:
+                count += 1
+                if deal_count == 0:
+                    recognized_revenue = 0
+                else:
+                    commission_per_deal = deal_value * commission_rate
+                    total_commission = commission_per_deal * deal_count
+                    recognized_revenue = total_commission / 12 * max(0, (months - month - 2))
 
-                    total_revenue = coaching_revenue + recognized_revenue
-                    net = total_revenue - total_expense_per_month
+                total_revenue = coaching_revenue + recognized_revenue
+                net = total_revenue - total_expense_per_month
 
-                    if net >= monthly_target or net >= 800000 / months:
-                        month_results.append({
-                            "Month": month + 1,
-                            "Coaching Clients": coaching_count,
-                            "Deal Count": deal_count,
-                            "Deal Value": deal_value,
-                            "Commission Rate": commission_rate,
-                            "Coaching Revenue": coaching_revenue,
-                            "Deal Revenue": recognized_revenue,
-                            "Total Revenue": total_revenue,
-                            "Net": net
-                        })
-            if not month_results:
-                success = False
-                break
-            best = sorted(month_results, key=lambda x: x["Net"])[-1]
-            all_monthly_solutions.append(best)
+                if net >= monthly_target:
+                    month_results.append({
+                        "Month": month + 1,
+                        "Coaching Clients": coaching_count,
+                        "Deal Count": deal_count,
+                        "Deal Value": deal_value,
+                        "Commission Rate": commission_rate,
+                        "Coaching Revenue": coaching_revenue,
+                        "Deal Revenue": recognized_revenue,
+                        "Total Revenue": total_revenue,
+                        "Net": net
+                    })
+        progress.progress((month + 1) / months)
+        month_status.text(f"Month {month + 1} simulation complete.")
+
+        if not month_results:
+            success = False
+            break
+        best = sorted(month_results, key=lambda x: x["Net"])[-1]
+        all_monthly_solutions.append(best)
 
     if success:
         st.success("✅ Found viable combinations for all months.")
@@ -122,6 +130,6 @@ if st.button("Run Monthly Simulation"):
         st.dataframe(df)
 
         csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button("Download Results as CSV", data=csv, file_name="monthly_forecast_plan.csv", mime="text/csv")
+        st.download_button("Download Results as CSV", data=csv, file_name="monthly_forecast_results.csv", mime="text/csv")
     else:
         st.warning("⚠️ Simulation failed to find combinations for one or more months. Try adjusting ranges.")
