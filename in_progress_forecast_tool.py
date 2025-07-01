@@ -119,6 +119,6 @@ if st.button("Run Monthly Simulation"):
     if success:
         st.success("✅ Found viable combinations for all months.")
         df = pd.DataFrame(all_monthly_solutions)
-        import ace_tools as tools; tools.display_dataframe_to_user(name="Monthly Forecast Plan", dataframe=df)
+        #import ace_tools as tools; tools.display_dataframe_to_user(name="Monthly Forecast Plan", dataframe=df)
     else:
         st.warning("⚠️ Simulation failed to find combinations for one or more months. Try adjusting ranges.")
